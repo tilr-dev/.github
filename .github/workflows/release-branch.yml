@@ -1,0 +1,116 @@
+name: release-branch
+
+on:
+  workflow_call:
+    inputs:
+      workflow-sha:
+        description: Immutable tilr-dev/.github commit, identical to the caller's uses pin
+        required: true
+        type: string
+      package-path:
+        description: The release-please package to expose (root or nested path)
+        default: '.'
+        type: string
+      app-client-id:
+        description: tilr-bot GitHub App client ID
+        required: true
+        type: string
+    secrets:
+      app-private-key:
+        description: tilr-bot private key for a repository-scoped installation token
+        required: true
+    outputs:
+      release_created:
+        description: True only when release-please created a stable release
+        value: ${{ jobs.release.outputs.release_created }}
+      tag:
+        description: Stable or candidate tag, empty when nothing should be built
+        value: ${{ jobs.release.outputs.tag }}
+      version:
+        description: Selected tag without the v prefix
+        value: ${{ jobs.release.outputs.version }}
+      is_rc:
+        description: True only when a candidate was selected
+        value: ${{ jobs.release.outputs.is_rc }}
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.metadata.outputs.tag }}
+      version: ${{ steps.metadata.outputs.version }}
+      is_rc: ${{ steps.metadata.outputs.is_rc }}
+    steps:
+      - name: Validate branch and implementation pin before obtaining credentials
+        env:
+          BRANCH: ${{ github.ref_name }}
+          WORKFLOW_SHA: ${{ inputs.workflow-sha }}
+          EVENT: ${{ github.event_name }}
+        shell: bash
+        run: |
+          if ! [[ $EVENT == push && $BRANCH =~ ^release/(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::release branches are named release/X.Y, not $BRANCH (event $EVENT)"
+            exit 1
+          fi
+          [[ $WORKFLOW_SHA =~ ^[0-9a-f]{40}$ ]] || { echo '::error::workflow-sha must be an immutable commit'; exit 1; }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          path: caller
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tilr-dev/.github
+          ref: ${{ inputs.workflow-sha }}
+          persist-credentials: false
+          path: shared
+      - id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.app-private-key }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Install the shared release-please engine
+        run: npm ci --prefix shared/.github/release-please --ignore-scripts --no-audit --no-fund
+      - id: release
+        name: Release from the branch line and shipped history
+        working-directory: caller
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          BRANCH: ${{ github.ref_name }}
+          PACKAGE_PATH: ${{ inputs.package-path }}
+        run: node ../shared/.github/release-please/run.cjs
+      - id: rc
+        name: Tag a release candidate
+        if: steps.release.outputs.release_created != 'true'
+        working-directory: caller
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: bash ../shared/.github/release-please/candidate.sh
+      - id: metadata
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RC_TAG: ${{ steps.rc.outputs.tag_name }}
+        shell: bash
+        run: |
+          tag=${RELEASE_TAG:-$RC_TAG}
+          {
+            echo "tag=$tag"
+            echo "version=${tag#v}"
+            echo "is_rc=$([[ -n $RC_TAG ]] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
