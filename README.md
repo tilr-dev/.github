@@ -28,14 +28,14 @@ python3 scripts/test_gitleaks_workflow.py
 
 `tilr-dev/.github/.github/workflows/release-branch.yml@<commit>` selects a release tag
 and creates its GitHub Release. Call it on branch pushes to `release/**` and tag pushes
-matching `v*`. Only `release/X.Y` and stable `vX.Y.Z` refs are accepted (numeric components,
+matching `v*` with `v*-rc.*` excluded. Only `release/X.Y` and stable `vX.Y.Z` refs are accepted (numeric components,
 no leading zeroes). The caller job needs `contents: read`.
 
 ```yaml
 on:
   push:
     branches: ['release/**']
-    tags: ['v*']
+    tags: ['v*', '!v*-rc.*']
 
 jobs:
   release:
@@ -48,6 +48,9 @@ jobs:
     secrets:
       app-private-key: ${{ secrets.TILR_BOT_PRIVATE_KEY }}
 ```
+
+The caller trigger must exclude `vX.Y.Z-rc.N` tags. CI creates them with the tilr-bot
+App token, so including them would re-enter the workflow and fail stable-tag validation.
 
 | Input | Meaning |
 | --- | --- |

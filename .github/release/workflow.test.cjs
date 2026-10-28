@@ -8,6 +8,29 @@ const workflow = readFileSync(join(__dirname, '../workflows/release-branch.yml')
 const validation = workflow.split('        run: |\n')[1].split('      - uses:')[0]
   .split('\n').map(line => line.replace(/^          /, '')).join('\n');
 
+test('documented caller accepts stable tags and excludes bot-created RC tags', () => {
+  const readme = readFileSync(join(__dirname, '../../README.md'), 'utf8');
+  const patterns = JSON.parse(readme.match(/^    tags: (\[.*\])$/m)[1].replaceAll("'", '"'));
+  // These filters use only '*' globs, which Bash case patterns also support.
+  const accepts = tag => spawnSync('bash', ['-c', `
+    tag=$1; shift
+    included=false
+    for pattern in "$@"; do
+      case "$pattern" in
+        !*) case "$tag" in \${pattern:1}) included=false;; esac;;
+        *) case "$tag" in $pattern) included=true;; esac;;
+      esac
+    done
+    "$included"
+  `, '--', tag, ...patterns]).status === 0;
+  for (const version of ['0.0.0', '1.2.3', '10.20.30']) {
+    assert.ok(accepts(`v${version}`), `stable v${version} must trigger a release`);
+    for (const n of [1, 2, 10]) {
+      assert.ok(!accepts(`v${version}-rc.${n}`), `bot-created v${version}-rc.${n} must not re-enter the workflow`);
+    }
+  }
+});
+
 test('workflow entry validation agrees with runner and rejects malformed events before checkout', () => {
   const base = { EVENT: 'push', REF_TYPE: 'branch', REF_NAME: 'release/1.2', WORKFLOW_SHA: 'a'.repeat(40) };
   for (const extra of [{}, { REF_TYPE: 'tag', REF_NAME: 'v1.2.3' }, { REF_NAME: 'release/next' },
