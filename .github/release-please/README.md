@@ -1,6 +1,6 @@
 # Release-line runner
 
-This is the single release-please 17.6.0 runner and test suite for gitpm and tilrd.
+This is the single release-please 17.6.0 runner and test suite for repositories that call the shared release branch workflow.
 Run `run.cjs` with the caller checkout as working directory and `GH_TOKEN`,
 `GITHUB_REPOSITORY`, `BRANCH`, `PACKAGE_PATH` and `GITHUB_OUTPUT` set by the reusable
 workflow. Dependencies are resolved beside this script, never from the caller checkout.
