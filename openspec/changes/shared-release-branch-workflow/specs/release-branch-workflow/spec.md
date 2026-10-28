@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Shared release branch orchestration
-The release workflow SHALL delegate release-line version selection and release candidate tagging to `tilr-dev/.github/.github/workflows/release-branch.yml`. Callers SHALL pin the workflow to an immutable commit and retain artifact builds and publication in their own repositories.
+`tilr-dev/.github/.github/workflows/release-branch.yml` SHALL perform release-line version selection and release candidate tagging for the release workflow that calls it. Callers pin the workflow to an immutable commit and retain artifact builds and publication in their own repositories.
 
 #### Scenario: A release branch is pushed
 - **WHEN** a push to `release/X.Y` creates no stable release

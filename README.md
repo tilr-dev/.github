@@ -23,8 +23,8 @@ gitleaks git --redact --no-banner --exit-code 1 .
 
 ## Shared release branch workflow
 
-`tilr-dev/.github/.github/workflows/release-branch.yml@<commit>` orchestrates releases
-for gitpm and tilrd. Invoke it on pushes to `release/**`, with job permission `contents: read`.
+`tilr-dev/.github/.github/workflows/release-branch.yml@<commit>` orchestrates release-line
+version selection and release candidates for a calling repository. Invoke it on pushes to `release/**`, with job permission `contents: read`.
 Keep caller concurrency serialized (`cancel-in-progress: false`). The workflow validates
 `release/X.Y` before obtaining a short-lived repository-scoped tilr-bot installation token.
 It uses release-please 17.6.0 and the caller's `release-please-config.json` and
@@ -34,7 +34,7 @@ version and shipped changelog baseline. The implementation is checked out separa
 | Input | Default | Meaning |
 | --- | --- | --- |
 | `workflow-sha` | required | Full 40-character commit of this repository, identical to the `uses` pin |
-| `package-path` | `.` | Package key in the caller's release-please config; gitpm uses `crates/gitpm` |
+| `package-path` | `.` | Package key in the caller's release-please config, e.g. `crates/gitpm` for a nested crate |
 | `app-client-id` | required | `vars.TILR_BOT_CLIENT_ID` from the caller |
 
 Pass `secrets.app-private-key` explicitly from `secrets.TILR_BOT_PRIVATE_KEY`.
@@ -51,9 +51,8 @@ No App credentials are passed to build jobs.
 If no stable release is created, the workflow creates a prerelease and tags the pushed commit,
 increments the candidate number for subsequent commits, and reuses a candidate on rerun.
 A commit already carrying a stable tag produces no candidate. Callers build `outputs.tag`,
-attach archives and checksums, and retain signing and publishing. gitpm publishes to crates.io
-only when `release_created == 'true'`; tilrd sends candidates to CDN beta and stable releases
-to the stable channel. A failed build can leave a prerelease without assets until rerun.
+attach archives and checksums, and retain signing and publishing; a publication meant only for
+stable releases (for example crates.io) is gated on `release_created == 'true'`. A failed build can leave a prerelease without assets until rerun.
 
 Update `uses` and `workflow-sha` together. Reusable workflows run in the caller's GitHub
 context, so `github.workflow_sha` cannot select the shared implementation; the explicit

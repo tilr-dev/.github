@@ -1,8 +1,8 @@
 ## Why
-Release orchestration is duplicated in gitpm and tilrd; only tilrd currently tags release candidates. Both repositories now use the release-line runner introduced in their release workflows.
+Release orchestration is duplicated in the release workflows of the organization's repositories, and only one of them tags release candidates. One reusable workflow gives every repository the same release branch scheme.
 
 ## What Changes
-- Introduce a shared release-branch workflow in tilr-dev/.github and call it from gitpm and tilrd at an immutable commit.
+- Introduce a shared release-branch workflow in tilr-dev/.github that callers invoke at an immutable commit.
 - Keep one release-line runner and regression suite, validate release branch names, and expose release/candidate metadata.
 - Keep artifact builds, uploads, crates.io publication and CDN publication in their calling repositories.
 
@@ -11,4 +11,4 @@ Release orchestration is duplicated in gitpm and tilrd; only tilrd currently tag
 - Changing release-line version selection or stable publication policy.
 
 ## Impact
-Callers: gitpm and tilrd. This introduces a new workflow contract; no existing shared workflow contract is replaced.
+Callers: none yet; repositories adopt the workflow by pinning it in their release workflows. This introduces a new workflow contract; no existing shared workflow contract is replaced.
