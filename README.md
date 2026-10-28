@@ -18,7 +18,7 @@ into `main` passes `.github/workflows/ci.yml` (`openspec`, `actionlint`, `gitlea
 ```sh
 openspec validate --all --strict
 actionlint
-gitleaks git --redact --no-banner --exit-code 1 .
+gitleaks git --redact --no-banner --exit-code 1 --log-opts=HEAD .
 ```
 
 ## Shared release branch workflow
