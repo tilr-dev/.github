@@ -6,7 +6,6 @@ const {tmpdir} = require('node:os');
 const path = require('node:path');
 const {Manifest} = require('release-please');
 const {releaseManifest, planRelease, releaseOutputs, run} = require('./run.cjs');
-const root = path.resolve(__dirname, '../..');
 
 function fixture(t, version = '0.0.1') {
   const repo = mkdtempSync(path.join(tmpdir(), 'release-line-'));
