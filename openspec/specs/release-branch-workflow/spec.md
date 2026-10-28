@@ -1,7 +1,7 @@
 # release-branch-workflow Specification
 
 ## Purpose
-Release orchestration is duplicated in the release workflows of the organization's repositories, and only one of them tags release candidates. One reusable workflow gives every repository the same release branch scheme.
+Define the reusable release branch workflow this repository provides to the release workflows of the organization's repositories: release branch validation, release-please on the pushed release line, release candidate tagging, and the release metadata callers build and publish from.
 
 ## Requirements
 
