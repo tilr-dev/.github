@@ -1,0 +1,8 @@
+# 2026-10-28: actionlint 1.7.12 rejects GitHub's documented concurrency.queue.
+# Recheck with: actionlint -config-file /dev/null .github/workflows/release-branch.yml
+# Remove this exact-message compatibility filter when upstream supports queue.
+# https://github.com/rhysd/actionlint/issues/657
+paths:
+  .github/workflows/release-branch.yml:
+    ignore:
+      - '^unexpected key "queue" for "concurrency" section\. expected one of "cancel-in-progress", "group"$'

@@ -37,3 +37,14 @@ test('workflow fetches full caller history and pinned implementation, with minim
     assert.match(workflow, new RegExp(`${key}: \\$\\{\\{ steps.release.outputs.${key} \\}\\}`));
   }
 });
+
+test('queue compatibility filter is restricted to its exact diagnostic and release workflow', () => {
+  const config = readFileSync(join(__dirname, '../actionlint.yaml'), 'utf8');
+  const entries = config.split('\n').filter(line => /^\s+- '/.test(line));
+  assert.equal(entries.length, 1);
+  const pattern = new RegExp(entries[0].trim().slice(3, -1));
+  assert.ok(pattern.test('unexpected key "queue" for "concurrency" section. expected one of "cancel-in-progress", "group"'));
+  for (const message of ['unexpected key "typo" for "concurrency" section. expected one of "cancel-in-progress", "group"',
+    'unexpected key "queue" for "steps" section. expected one of "run", "uses"', 'invalid expression']) assert.ok(!pattern.test(message));
+  assert.deepEqual(config.split('\n').filter(line => /^  \S.*:$/.test(line)), ['  .github/workflows/release-branch.yml:']);
+});
