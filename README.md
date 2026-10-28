@@ -13,12 +13,15 @@ call (`tilr-dev/.github/.github/workflows/<file>@<ref>`).
 
 What this repository provides is specified in [openspec/specs/](openspec/specs/). A pull request
 into `main` passes `.github/workflows/ci.yml` (`openspec`, `actionlint`, `gitleaks`) and
-`.github/workflows/spec-change.yml` (`spec-change`). Locally:
+`.github/workflows/spec-change.yml` (`spec-change`). On pushes, pull requests and merge
+queue groups, gitleaks scans HEAD and all its ancestors, excluding unrelated fetched
+branches. Locally:
 
 ```sh
 openspec validate --all --strict
 actionlint
-gitleaks git --redact --no-banner --exit-code 1 .
+gitleaks git --redact --no-banner --exit-code 1 --log-opts=HEAD .
+python3 scripts/test_gitleaks_workflow.py
 ```
 
 ## Shared release branch workflow

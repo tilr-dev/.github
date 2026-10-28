@@ -19,7 +19,7 @@ context: |
   messages are written in English. Discussions with the owner may be in Russian.
 
   CI gates (.github/workflows/ci.yml): `openspec validate --all --strict`, actionlint over
-  .github/workflows/, and gitleaks over the whole history. `spec-change`
+  .github/workflows/, and gitleaks over the checked commit history. `spec-change`
   (.github/workflows/spec-change.yml) authorizes edits of existing requirements.
 
   Secrets: no tokens, keys or personal data in files, workflows or commit messages; a
@@ -40,7 +40,7 @@ rules:
     - Specs describe what GitHub, a contributor or a calling workflow observes (files shown, checks reported, inputs and outputs), not step names.
   tasks:
     - Each task names how it is verified (command, check name or observable output).
-    - "Before marking a change done, run the checks from CI: `openspec validate --all --strict`, `actionlint`, and `gitleaks git --redact --no-banner --exit-code 1 .`."
+    - "Before marking a change done, run the checks from CI: `openspec validate --all --strict`, `actionlint`, and `gitleaks git --redact --no-banner --exit-code 1 --log-opts=HEAD .`."
 
 operations:
   apply:
