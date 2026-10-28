@@ -26,43 +26,76 @@ python3 scripts/test_gitleaks_workflow.py
 
 ## Shared release branch workflow
 
-`tilr-dev/.github/.github/workflows/release-branch.yml@<commit>` orchestrates release-line
-version selection and release candidates for a calling repository. Invoke it on pushes to `release/**`, with job permission `contents: read`.
-Keep caller concurrency serialized (`cancel-in-progress: false`). The workflow validates
-`release/X.Y` before obtaining a short-lived repository-scoped tilr-bot installation token.
-It uses release-please 17.6.0 and the caller's `release-please-config.json` and
-`.release-please-manifest.json`; complete caller history and tags select the branch line's
-version and shipped changelog baseline. The implementation is checked out separately.
+`tilr-dev/.github/.github/workflows/release-branch.yml@<commit>` selects a release tag
+and creates its GitHub Release. Call it on branch pushes to `release/**` and tag pushes
+matching `v*`. Only `release/X.Y` and stable `vX.Y.Z` refs are accepted (numeric components,
+no leading zeroes). The caller job needs `contents: read`.
 
-| Input | Default | Meaning |
-| --- | --- | --- |
-| `workflow-sha` | required | Full 40-character commit of this repository, identical to the `uses` pin |
-| `package-path` | `.` | Package key in the caller's release-please config, e.g. `crates/gitpm` for a nested crate |
-| `app-client-id` | required | `vars.TILR_BOT_CLIENT_ID` from the caller |
+```yaml
+on:
+  push:
+    branches: ['release/**']
+    tags: ['v*']
 
-Pass `secrets.app-private-key` explicitly from `secrets.TILR_BOT_PRIVATE_KEY`.
-The App token has contents, pull request and issues write access only in the calling repository.
-No App credentials are passed to build jobs.
+jobs:
+  release:
+    uses: tilr-dev/.github/.github/workflows/release-branch.yml@<40-character-commit>
+    permissions:
+      contents: read
+    with:
+      workflow-sha: <same-40-character-commit>
+      app-client-id: ${{ vars.TILR_BOT_CLIENT_ID }}
+    secrets:
+      app-private-key: ${{ secrets.TILR_BOT_PRIVATE_KEY }}
+```
+
+| Input | Meaning |
+| --- | --- |
+| `workflow-sha` | Required full 40-character commit of this repository, identical to the `uses` pin |
+| `app-client-id` | Required tilr-bot GitHub App client ID from the caller |
+
+Pass `secrets.app-private-key` explicitly. Install tilr-bot in the calling repository with
+**Contents: read and write** permission; no pull request or issues permission is required.
+The workflow mints a repository-scoped token and disables persisted checkout credentials.
+App credentials stay in the release job. The caller's normal build/publication permissions
+are configured separately.
 
 | Output | Meaning |
 | --- | --- |
-| `release_created` | String `true` only for a newly created stable release, otherwise `false` |
-| `tag` | Stable tag or candidate tag (`vX.Y.Z-rc.N`), empty when no build should run |
+| `tag` | Stable `vX.Y.Z` or candidate `vX.Y.Z-rc.N`; empty when no build should run |
 | `version` | `tag` without its leading `v`, or empty |
-| `is_rc` | String `true` for a selected candidate, otherwise `false` |
+| `is_rc` | String `true` for a candidate, otherwise `false` |
 
-If no stable release is created, the workflow creates a prerelease and tags the pushed commit,
-increments the candidate number for subsequent commits, and reuses a candidate on rerun.
-A commit already carrying a stable tag produces no candidate. Callers build `outputs.tag`,
-attach archives and checksums, and retain signing and publishing; a publication meant only for
-stable releases (for example crates.io) is gated on `release_created == 'true'`. A failed build can leave a prerelease without assets until rerun.
+A branch push selects one patch above the highest stable tag on that line, or patch zero
+when there are no stable tags. Candidate numbers start at one and increase numerically.
+A rerun reuses the commit's candidate even if a newer stable tag now exists. A branch
+commit already carrying a stable tag on its line produces empty tag/version and no
+candidate. Lightweight and annotated tags are supported. Missing prereleases are created
+on rerun; existing releases are reused.
+
+A stable tag push must point at a commit contained in the matching `release/X.Y` branch.
+Missing branches, a different line or unrelated history fail before any tag or release
+mutation. Stable releases use GitHub-generated notes starting at the highest previous
+stable tag on the line, or the highest previous stable tag overall if the line has none.
+The current tag and higher versions are excluded from that baseline. The first release
+omits the notes start tag. Stable tags are created by an admin; CI creates RC tags with
+tilr-bot. Configure repository release-tag rulesets accordingly after adoption.
+
+The reusable job serializes release selection and creation for the caller repository
+with `cancel-in-progress: false`. Keep any caller release concurrency serialized too,
+using a different group from the reusable job. Callers build nonempty `outputs.tag`,
+attach archives and checksums, and retain signing and publication. Gate stable-only
+publication on a nonempty tag and `is_rc == 'false'`. A failed build can leave a release
+without assets until rerun. Publication steps should support reruns.
 
 Update `uses` and `workflow-sha` together. Reusable workflows run in the caller's GitHub
-context, so `github.workflow_sha` cannot select the shared implementation; the explicit
-implementation pin avoids fetching mutable main. Caller CI checks these pins match.
-The shared release-line suite runs both root and nested package fixtures:
+context, so the explicit implementation pin selects the separate shared checkout; full
+caller history, branches and tags supply release metadata. This contract replaces the
+old package-path/config/manifest and release_created contract. The desktop-mac, tilrd
+and gitpm callers adopt the new pin and contract separately.
+
+Run the dependency-free integration suite (Node.js and Git required):
 
 ```sh
-npm ci --prefix .github/release-please --ignore-scripts --no-audit --no-fund
-npm test --prefix .github/release-please
+node --test .github/release/*.test.cjs
 ```
