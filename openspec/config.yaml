@@ -1,0 +1,49 @@
+schema: spec-driven
+
+# Project context: constraints an agent cannot infer from reading one file.
+# Checked against README.md, the community health files and .github/workflows/ (2026-10-28).
+context: |
+  Repository: tilr-dev/.github is the organization repository of tilr-dev. It holds the
+  default community health files every tilr-dev repository inherits (CONTRIBUTING.md,
+  SECURITY.md, CODE_OF_CONDUCT.md, PULL_REQUEST_TEMPLATE.md, ISSUE_TEMPLATE/) and is the home
+  of reusable GitHub Actions workflows the other repositories call (owner's decision,
+  2026-10-27). Nothing here is built or released: the files take effect when they land on main.
+
+  Consumers: the files at the repository root are read by GitHub for every repository of the
+  organization that has no file of its own with the same name; a reusable workflow under
+  .github/workflows/ is referenced by the other repositories (gitpm, tilrd, cloud,
+  desktop-mac) as `tilr-dev/.github/.github/workflows/<file>@<ref>`. A change to a reusable
+  workflow's inputs, secrets or outputs is a change of every caller and says which ones.
+
+  Language: every OpenSpec artifact, README.md, the community health files and workflow
+  messages are written in English. Discussions with the owner may be in Russian.
+
+  CI gates (.github/workflows/ci.yml): `openspec validate --all --strict`, actionlint over
+  .github/workflows/, and gitleaks over the whole history. `spec-change`
+  (.github/workflows/spec-change.yml) authorizes edits of existing requirements.
+
+  Secrets: no tokens, keys or personal data in files, workflows or commit messages; a
+  workflow takes secrets only from GitHub secrets, never inline.
+
+  Git flow: `main` is the only integration branch; work happens on branches off `main` and
+  reaches it only through a pull request (squash). No commit or push without explicit
+  permission. No AI attribution: never add "Generated with Claude Code" or an agent
+  Co-Authored-By.
+
+rules:
+  proposal:
+    - State what is out of scope (a "Non-goals" or "Out of scope" bullet list).
+    - Mark every breaking change with **BREAKING**; a change to a reusable workflow's inputs, secrets, outputs or job names that a caller relies on is breaking. Name the callers that change with it.
+    - In Why, cite only recorded facts (commit, PR, issue, note, session); write "Rationale not recorded" when unknown.
+  specs:
+    - Every requirement uses SHALL or MUST and has at least one #### Scenario with WHEN/THEN bullets.
+    - Specs describe what GitHub, a contributor or a calling workflow observes (files shown, checks reported, inputs and outputs), not step names.
+  tasks:
+    - Each task names how it is verified (command, check name or observable output).
+    - "Before marking a change done, run the checks from CI: `openspec validate --all --strict`, `actionlint`, and `gitleaks git --redact --no-banner --exit-code 1 .`."
+
+operations:
+  apply:
+    guidance:
+      - Work on a branch off main; do not commit, push or open PRs without explicit permission.
+      - Update README.md in the same change as the files it describes.
