@@ -30,6 +30,7 @@ test('workflow fetches full caller history and pinned implementation, with minim
   assert.match(workflow, /permission-contents: write/);
   assert.doesNotMatch(workflow, /permission-(pull-requests|issues)|release_created|package-path|npm/);
   assert.match(workflow, /run: node ..\/shared\/\.github\/release\/release.cjs/);
+  assert.match(workflow, /queue: max/);
   assert.match(workflow, /group: shared-release-\$\{\{ github.repository \}\}\n\s+cancel-in-progress: false/);
   for (const key of ['tag', 'version', 'is_rc']) {
     assert.match(workflow, new RegExp(`value: \\$\\{\\{ jobs.release.outputs.${key} \\}\\}`));

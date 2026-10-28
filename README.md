@@ -82,7 +82,8 @@ omits the notes start tag. Stable tags are created by an admin; CI creates RC ta
 tilr-bot. Configure repository release-tag rulesets accordingly after adoption.
 
 The reusable job serializes release selection and creation for the caller repository
-with `cancel-in-progress: false`. Keep any caller release concurrency serialized too,
+with `cancel-in-progress: false` and `queue: max` (up to 100 pending jobs). Keep any
+caller release concurrency serialized with `queue: max` too,
 using a different group from the reusable job. Callers build nonempty `outputs.tag`,
 attach archives and checksums, and retain signing and publication. Gate stable-only
 publication on a nonempty tag and `is_rc == 'false'`. A failed build can leave a release
